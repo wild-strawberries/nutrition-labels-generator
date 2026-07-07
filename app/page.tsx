@@ -379,7 +379,7 @@ export default function HomePage() {
       <section className="panel">
         <div className="header-row">
           <div>
-            <h1>Food Label Generator</h1>
+            <h1>Nutrition Labels Generator</h1>
             <p>Build and manage product nutrition labels from local CIQUAL ingredient data.</p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 {
-  "name": "food-label-generator",
+  "name": "nutrition-labels-generator",
   "version": "0.1.0",
   "private": true,
   "scripts": {
