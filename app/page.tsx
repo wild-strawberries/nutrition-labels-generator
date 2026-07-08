@@ -247,7 +247,7 @@ export default function HomePage() {
         id: `row-${Date.now()}-${idx}`,
         ingredientName: ing.name,
         quantity: ing.quantity,
-        unit: ing.unit || 'g'
+        unit: 'g' as const
       }));
       setRows(mappedRows.length ? mappedRows : [emptyRow(1)]);
       setFinalWeight(label.data.finalWeight || 0);
