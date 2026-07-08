@@ -463,3 +463,9 @@ td:last-child {
     display: block;
   }
 }
+
+.results-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

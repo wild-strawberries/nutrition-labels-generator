@@ -508,14 +508,6 @@ export default function HomePage() {
                 <button type="button" className="primary-button" onClick={runCalculation}>
                   Calculate
                 </button>
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={saveLabel}
-                  disabled={!canSave || productName.trim() === ''}
-                >
-                  Save
-                </button>
               </div>
             </div>
 
@@ -540,6 +532,17 @@ export default function HomePage() {
                   <NutritionTable nutritionPer100g={nutritionPer100g} nutrientKeys={nutrientKeys} fatDetailsVisible={fatDetailsVisible} />
                 </div>
               </section>
+
+              <div className="results-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={saveLabel}
+                  disabled={!canSave || productName.trim() === ''}
+                >
+                  Save
+                </button>
+              </div>
             )}
           </div>
         )}
