@@ -346,6 +346,9 @@ export default function HomePage() {
     }
 
     setFinalWeight(computedFinalWeight);
+    setNutritionPer100g(Object.fromEntries(
+      Object.entries(per100g).map(([k, v]) => [k, Number((v || 0).toFixed(4))])
+    ));
 
     const payload: ExportPayload = {
       productName: productName.trim(),
