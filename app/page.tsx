@@ -192,6 +192,7 @@ export default function HomePage() {
   const [finalWeight, setFinalWeight] = useState(0);
   const [nutritionPer100g, setNutritionPer100g] = useState<NutritionTotals | null>(null);
   const [readyExportPayload, setReadyExportPayload] = useState<ExportPayload | null>(null);
+  const [canSave, setCanSave] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
 
@@ -240,14 +241,17 @@ export default function HomePage() {
     setRows((current) =>
       current.map((item, idx) => (idx === index ? { ...item, ...row } : item))
     );
+    setCanSave(false);
   };
 
   const addRow = () => {
     setRows((current) => [...current, emptyRow(current.length + 1)]);
+    setCanSave(false);
   };
 
   const removeRow = (index: number) => {
     setRows((current) => current.filter((_, idx) => idx !== index));
+    setCanSave(false);
   };
 
   const runCalculation = async () => {
@@ -334,12 +338,13 @@ export default function HomePage() {
       )
     };
     setReadyExportPayload(payload);
+    setCanSave(true);
     setExportMessage('Calculation done. Click "Save" to save this label.');
   };
 
   const saveLabel = async () => {
     setExportMessage(null);
-    if (!readyExportPayload) {
+    if (!readyExportPayload || !canSave) {
       setExportMessage('Nothing to save. Run calculation first.');
       return;
     }
@@ -359,8 +364,8 @@ export default function HomePage() {
 
       const data = await response.json();
       setExportMessage(`✓ Saved as "${readyExportPayload.productName}"`);
-      
       // Reset form after 2 seconds
+      setCanSave(false);
       setTimeout(() => {
         setProductName('');
         setRows([emptyRow(1)]);
