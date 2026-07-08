@@ -515,34 +515,36 @@ export default function HomePage() {
             {exportMessage ? <p className="success">{exportMessage}</p> : null}
 
             {nutritionPer100g && (
-              <section className="results">
-                <div className="result-panel">
-                  <h2>Ingredients</h2>
-                  <ol>
-                    {sortedIngredientRows.map((row) => (
-                      <li key={row.id}>
-                        {row.ingredientName} — {row.quantity} {row.unit}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
+              <>
+                <section className="results">
+                  <div className="result-panel">
+                    <h2>Ingredients</h2>
+                    <ol>
+                      {sortedIngredientRows.map((row) => (
+                        <li key={row.id}>
+                          {row.ingredientName} — {row.quantity} {row.unit}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
 
-                <div className="result-panel">
-                  <h2>Nutrition per 100 g</h2>
-                  <NutritionTable nutritionPer100g={nutritionPer100g} nutrientKeys={nutrientKeys} fatDetailsVisible={fatDetailsVisible} />
-                </div>
-              </section>
+                  <div className="result-panel">
+                    <h2>Nutrition per 100 g</h2>
+                    <NutritionTable nutritionPer100g={nutritionPer100g} nutrientKeys={nutrientKeys} fatDetailsVisible={fatDetailsVisible} />
+                  </div>
+                </section>
 
-              <div className="results-actions">
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={saveLabel}
-                  disabled={!canSave || productName.trim() === ''}
-                >
-                  Save
-                </button>
-              </div>
+                <div className="results-actions">
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={saveLabel}
+                    disabled={!canSave || productName.trim() === ''}
+                  >
+                    Save
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}
