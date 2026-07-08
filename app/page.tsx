@@ -216,6 +216,7 @@ export default function HomePage() {
   const [canSave, setCanSave] = useState(false);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
+  const [focusedRow, setFocusedRow] = useState<number | null>(null);
 
   const ingredientMap = new Map(ingredientOptions.map((item) => [item.ingr_name, item]));
   const nutrientKeys = inferredNutrientKeys;
@@ -377,47 +378,69 @@ export default function HomePage() {
                 <span aria-hidden="true"></span>
               </div>
 
-              {rows.map((row, index) => (
-                <div key={row.id} className="ingredient-row">
-                  <div>
-                    <span className="mobile-label">Ingredient</span>
-                    <div className="ingredient-input">
-                      <input
-                        list="ingredients"
-                        value={row.ingredientName}
-                        onChange={(event) => updateRow(index, { ingredientName: event.target.value })}
-                        placeholder="Type ingredient name"
-                      />
-                      <datalist id="ingredients">
-                        {ingredientNames.map((name) => (
-                          <option key={name} value={name} />
-                        ))}
-                      </datalist>
-                      {row.error ? <p className="field-error">{row.error}</p> : null}
+              {rows.map((row, index) => {
+                const query = row.ingredientName.trim().toLowerCase();
+                const suggestions = query
+                  ? ingredientNames.filter((name) => name.toLowerCase().includes(query)).slice(0, 10)
+                  : ingredientNames.slice(0, 10);
+
+                return (
+                  <div key={row.id} className="ingredient-row">
+                    <div>
+                      <span className="mobile-label">Ingredient</span>
+                      <div className="ingredient-input">
+                        <input
+                          autoComplete="off"
+                          value={row.ingredientName}
+                          onChange={(event) => updateRow(index, { ingredientName: event.target.value })}
+                          onFocus={() => setFocusedRow(index)}
+                          onBlur={() => setTimeout(() => setFocusedRow((current) => (current === index ? null : current)), 100)}
+                          placeholder="Type ingredient name"
+                        />
+                        {focusedRow === index && suggestions.length > 0 ? (
+                          <div className="autocomplete-list">
+                            {suggestions.map((name) => (
+                              <button
+                                key={name}
+                                type="button"
+                                className="autocomplete-item"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  updateRow(index, { ingredientName: name });
+                                  setFocusedRow(null);
+                                }}
+                              >
+                                {name}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                        {row.error ? <p className="field-error">{row.error}</p> : null}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="mobile-label">Quantity</span>
+                      <div className="quantity-with-unit">
+                        <input
+                          type="number"
+                          min="1"
+                          value={row.quantity}
+                          onChange={(event) => updateRow(index, { quantity: sanitizeNumericInput(event.target.value) })}
+                        />
+                        <span className="unit-suffix">g</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="mobile-label" aria-hidden="true"></span>
+                      <button type="button" className="remove-button" onClick={() => removeRow(index)}>
+                        Remove
+                      </button>
                     </div>
                   </div>
-
-                  <div>
-                    <span className="mobile-label">Quantity</span>
-                    <div className="quantity-with-unit">
-                      <input
-                        type="number"
-                        min="1"
-                        value={row.quantity}
-                        onChange={(event) => updateRow(index, { quantity: sanitizeNumericInput(event.target.value) })}
-                      />
-                      <span className="unit-suffix">g</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="mobile-label" aria-hidden="true"></span>
-                    <button type="button" className="remove-button" onClick={() => removeRow(index)}>
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               <button type="button" className="ghost-button" onClick={addRow}>
                 + Add Ingredient
