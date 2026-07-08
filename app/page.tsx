@@ -108,6 +108,32 @@ function sanitizeNumericInput(value: string) {
   return normalized === '' ? 0 : Number(normalized);
 }
 
+const STORAGE_KEY = 'nutrition-labels';
+
+function makeSlug(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function loadLabelsFromStorage(): SavedLabel[] {
+  try {
+    if (typeof window === 'undefined') return [];
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as SavedLabel[];
+  } catch {
+    return [];
+  }
+}
+
+function persistLabels(labels: SavedLabel[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
+}
+
 function emptyRow(index: number): IngredientRow {
   return {
     id: `row-${Date.now()}-${index}`,
@@ -223,28 +249,23 @@ export default function HomePage() {
   const loadSavedLabels = async () => {
     setLoadingLabels(true);
     try {
-      const response = await fetch('/api/labels');
-      if (response.ok) {
-        const data = (await response.json()) as SavedLabel[];
-        setSavedLabels(data);
-        if (data.length > 0) {
-          setSelectedLabel((current) => {
-            if (current && data.some((item: SavedLabel) => item.filename === current.filename)) {
-              return current;
-            }
-            return data[0];
-          });
-        } else {
-          setSelectedLabel(null);
-        }
+      const data = loadLabelsFromStorage();
+      setSavedLabels(data);
+      if (data.length > 0) {
+        setSelectedLabel((current) => {
+          if (current && data.some((item) => item.filename === current.filename)) {
+            return current;
+          }
+          return data[0];
+        });
+      } else {
+        setSelectedLabel(null);
       }
     } catch (error) {
       console.error('Failed to load labels:', error);
     }
     setLoadingLabels(false);
   };
-
-
 
   const updateRow = (index: number, row: Partial<IngredientRow>) => {
     setRows((current) =>
@@ -362,25 +383,24 @@ export default function HomePage() {
     }
 
     try {
-      const bodyToSend = readyExportPayload;
+      const existing = loadLabelsFromStorage();
+      const slug = makeSlug(readyExportPayload.productName) || 'product';
+      const filename = `${slug}.json`;
 
-      const response = await fetch('/api/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyToSend)
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setExportMessage(data.error || 'Failed to save label.');
+      if (existing.some((label) => label.filename === filename)) {
+        setExportMessage('A label with that name already exists. Choose a different product name.');
         return;
       }
 
-      const data = await response.json();
+      const newLabel: SavedLabel = {
+        filename,
+        productName: readyExportPayload.productName,
+        data: readyExportPayload
+      };
+
+      persistLabels([...existing, newLabel]);
       setExportMessage(`✓ Saved as "${readyExportPayload.productName}"`);
-      // Reset form after 2 seconds
       setCanSave(false);
-      // refresh saved labels list
       loadSavedLabels();
       setTimeout(() => {
         setProductName('');
@@ -398,19 +418,13 @@ export default function HomePage() {
   const deleteLabel = async (filename: string) => {
     setExportMessage(null);
     try {
-      const response = await fetch(`/api/labels?filename=${encodeURIComponent(filename)}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setExportMessage(data.error || 'Failed to delete label.');
-        return;
-      }
+      const existing = loadLabelsFromStorage();
+      const updated = existing.filter((label) => label.filename !== filename);
+      persistLabels(updated);
 
       setExportMessage('Label deleted.');
       setSelectedLabel((current) => (current?.filename === filename ? null : current));
-      await loadSavedLabels();
+      loadSavedLabels();
     } catch (error) {
       setExportMessage('Failed to delete label.');
     }
@@ -561,6 +575,7 @@ export default function HomePage() {
           <div className="saved-labels-view">
             <div className="saved-labels-sidebar">
               <h3>Saved Labels</h3>
+              <p className="field-help" style={{ marginTop: 0 }}>Saved locally in your browser for internal use.</p>
               {loadingLabels ? (
                 <p style={{ color: '#999' }}>Loading...</p>
               ) : savedLabels.length === 0 ? (
