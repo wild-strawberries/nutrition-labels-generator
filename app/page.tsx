@@ -449,22 +449,26 @@ export default function HomePage() {
 
               {rows.map((row, index) => (
                 <div key={row.id} className="ingredient-row">
-                  <div className="ingredient-input">
-                    <input
-                      list="ingredients"
-                      value={row.ingredientName}
-                      onChange={(event) => updateRow(index, { ingredientName: event.target.value })}
-                      placeholder="Type ingredient name"
-                    />
-                    <datalist id="ingredients">
-                      {ingredientNames.map((name) => (
-                        <option key={name} value={name} />
-                      ))}
-                    </datalist>
-                    {row.error ? <p className="field-error">{row.error}</p> : null}
+                  <div>
+                    <span className="mobile-label">Ingredient</span>
+                    <div className="ingredient-input">
+                      <input
+                        list="ingredients"
+                        value={row.ingredientName}
+                        onChange={(event) => updateRow(index, { ingredientName: event.target.value })}
+                        placeholder="Type ingredient name"
+                      />
+                      <datalist id="ingredients">
+                        {ingredientNames.map((name) => (
+                          <option key={name} value={name} />
+                        ))}
+                      </datalist>
+                      {row.error ? <p className="field-error">{row.error}</p> : null}
+                    </div>
                   </div>
 
                   <div>
+                    <span className="mobile-label">Quantity</span>
                     <input
                       type="number"
                       min="1"
@@ -474,12 +478,16 @@ export default function HomePage() {
                   </div>
 
                   <div>
+                    <span className="mobile-label">Unit</span>
                     <div style={{ padding: 12, borderRadius: 8, background: '#fff', border: '1px solid #e6e9ef', textAlign: 'center' }}>g</div>
                   </div>
 
-                  <button type="button" className="remove-button" onClick={() => removeRow(index)}>
-                    Remove
-                  </button>
+                  <div>
+                    <span className="mobile-label" aria-hidden="true"></span>
+                    <button type="button" className="remove-button" onClick={() => removeRow(index)}>
+                      Remove
+                    </button>
+                  </div>
                 </div>
               ))}
 

@@ -405,3 +405,31 @@ td:last-child {
     grid-template-columns: 1fr;
   }
 }
+
+/* Mobile label helpers: hide header and show per-field labels */
+@media (max-width: 820px) {
+  .ingredients-header {
+    display: none;
+  }
+
+  .mobile-label {
+    display: none;
+    font-size: 0.85rem;
+    color: #6b7482;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .ingredient-row > div {
+    display: block;
+  }
+
+  .ingredient-input {
+    width: 100%;
+  }
+
+  .ingredient-row {
+    gap: 12px;
+    align-items: stretch;
+  }
+}
