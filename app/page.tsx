@@ -199,6 +199,7 @@ export default function HomePage() {
   const [savedLabels, setSavedLabels] = useState<SavedLabel[]>([]);
   const [selectedLabel, setSelectedLabel] = useState<SavedLabel | null>(null);
   const [loadingLabels, setLoadingLabels] = useState(false);
+  const [editingFilename, setEditingFilename] = useState<string | null>(null);
 
   const ingredientMap = new Map(ingredientOptions.map((item) => [item.ingr_name, item]));
   const nutrientKeys = inferredNutrientKeys;
@@ -230,12 +231,32 @@ export default function HomePage() {
         if (data.length > 0 && !selectedLabel) {
           setSelectedLabel(data[0]);
         }
+        // clear any editing state when reloading list
+        setEditingFilename(null);
       }
     } catch (error) {
       console.error('Failed to load labels:', error);
     }
     setLoadingLabels(false);
   };
+
+    const loadLabelIntoForm = (label: SavedLabel) => {
+      // populate form fields for editing
+      setProductName(label.productName || '');
+      const mappedRows = (label.data.ingredients || []).map((ing, idx) => ({
+        id: `row-${Date.now()}-${idx}`,
+        ingredientName: ing.name,
+        quantity: ing.quantity,
+        unit: ing.unit || 'g'
+      }));
+      setRows(mappedRows.length ? mappedRows : [emptyRow(1)]);
+      setFinalWeight(label.data.finalWeight || 0);
+      setNutritionPer100g(label.data.nutritionPer100g || null);
+      setReadyExportPayload(null);
+      setCanSave(false);
+      setEditingFilename(label.filename);
+      setCurrentView('new');
+    };
 
   const updateRow = (index: number, row: Partial<IngredientRow>) => {
     setRows((current) =>
@@ -350,10 +371,14 @@ export default function HomePage() {
     }
 
     try {
+      const bodyToSend = editingFilename
+        ? { ...readyExportPayload, originalFilename: editingFilename }
+        : readyExportPayload;
+
       const response = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(readyExportPayload)
+        body: JSON.stringify(bodyToSend)
       });
 
       if (!response.ok) {
@@ -366,6 +391,9 @@ export default function HomePage() {
       setExportMessage(`✓ Saved as "${readyExportPayload.productName}"`);
       // Reset form after 2 seconds
       setCanSave(false);
+      // refresh saved labels list and clear editing state
+      loadSavedLabels();
+      setEditingFilename(null);
       setTimeout(() => {
         setProductName('');
         setRows([emptyRow(1)]);
@@ -474,7 +502,12 @@ export default function HomePage() {
                 <button type="button" className="primary-button" onClick={runCalculation}>
                   Calculate
                 </button>
-                <button type="button" className="primary-button" onClick={saveLabel} disabled={!readyExportPayload}>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={saveLabel}
+                  disabled={!canSave || productName.trim() === ''}
+                >
                   Save
                 </button>
               </div>
@@ -532,7 +565,14 @@ export default function HomePage() {
             <div className="saved-labels-content">
               {selectedLabel ? (
                 <>
-                  <h2>{selectedLabel.productName}</h2>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h2 style={{ margin: 0 }}>{selectedLabel.productName}</h2>
+                    <div>
+                      <button type="button" className="ghost-button" onClick={() => loadLabelIntoForm(selectedLabel)}>
+                        Edit
+                      </button>
+                    </div>
+                  </div>
                   <div className="saved-results stacked">
                     <div className="result-panel">
                       <h3>Ingredients</h3>
