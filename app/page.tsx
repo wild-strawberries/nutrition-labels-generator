@@ -199,7 +199,6 @@ export default function HomePage() {
   const [savedLabels, setSavedLabels] = useState<SavedLabel[]>([]);
   const [selectedLabel, setSelectedLabel] = useState<SavedLabel | null>(null);
   const [loadingLabels, setLoadingLabels] = useState(false);
-  const [editingFilename, setEditingFilename] = useState<string | null>(null);
 
   const ingredientMap = new Map(ingredientOptions.map((item) => [item.ingr_name, item]));
   const nutrientKeys = inferredNutrientKeys;
@@ -226,13 +225,18 @@ export default function HomePage() {
     try {
       const response = await fetch('/api/labels');
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as SavedLabel[];
         setSavedLabels(data);
-        if (data.length > 0 && !selectedLabel) {
-          setSelectedLabel(data[0]);
+        if (data.length > 0) {
+          setSelectedLabel((current) => {
+            if (current && data.some((item: SavedLabel) => item.filename === current.filename)) {
+              return current;
+            }
+            return data[0];
+          });
+        } else {
+          setSelectedLabel(null);
         }
-        // clear any editing state when reloading list
-        setEditingFilename(null);
       }
     } catch (error) {
       console.error('Failed to load labels:', error);
@@ -240,23 +244,7 @@ export default function HomePage() {
     setLoadingLabels(false);
   };
 
-    const loadLabelIntoForm = (label: SavedLabel) => {
-      // populate form fields for editing
-      setProductName(label.productName || '');
-      const mappedRows = (label.data.ingredients || []).map((ing, idx) => ({
-        id: `row-${Date.now()}-${idx}`,
-        ingredientName: ing.name,
-        quantity: ing.quantity,
-        unit: 'g' as const
-      }));
-      setRows(mappedRows.length ? mappedRows : [emptyRow(1)]);
-      setFinalWeight(label.data.finalWeight || 0);
-      setNutritionPer100g(label.data.nutritionPer100g || null);
-      setReadyExportPayload(null);
-      setCanSave(false);
-      setEditingFilename(label.filename);
-      setCurrentView('new');
-    };
+
 
   const updateRow = (index: number, row: Partial<IngredientRow>) => {
     setRows((current) =>
@@ -374,9 +362,7 @@ export default function HomePage() {
     }
 
     try {
-      const bodyToSend = editingFilename
-        ? { ...readyExportPayload, originalFilename: editingFilename }
-        : readyExportPayload;
+      const bodyToSend = readyExportPayload;
 
       const response = await fetch('/api/export', {
         method: 'POST',
@@ -394,9 +380,8 @@ export default function HomePage() {
       setExportMessage(`✓ Saved as "${readyExportPayload.productName}"`);
       // Reset form after 2 seconds
       setCanSave(false);
-      // refresh saved labels list and clear editing state
+      // refresh saved labels list
       loadSavedLabels();
-      setEditingFilename(null);
       setTimeout(() => {
         setProductName('');
         setRows([emptyRow(1)]);
@@ -407,6 +392,27 @@ export default function HomePage() {
       }, 2000);
     } catch (err) {
       setExportMessage('Failed to save label.');
+    }
+  };
+
+  const deleteLabel = async (filename: string) => {
+    setExportMessage(null);
+    try {
+      const response = await fetch(`/api/labels?filename=${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setExportMessage(data.error || 'Failed to delete label.');
+        return;
+      }
+
+      setExportMessage('Label deleted.');
+      setSelectedLabel((current) => (current?.filename === filename ? null : current));
+      await loadSavedLabels();
+    } catch (error) {
+      setExportMessage('Failed to delete label.');
     }
   };
 
@@ -580,8 +586,8 @@ export default function HomePage() {
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
                     <h2 style={{ margin: 0 }}>{selectedLabel.productName}</h2>
                     <div>
-                      <button type="button" className="ghost-button" onClick={() => loadLabelIntoForm(selectedLabel)}>
-                        Edit
+                      <button type="button" className="remove-button" onClick={() => deleteLabel(selectedLabel.filename)}>
+                        Delete
                       </button>
                     </div>
                   </div>

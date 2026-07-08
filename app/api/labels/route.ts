@@ -31,3 +31,21 @@ export async function GET() {
     return NextResponse.json([]);
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const url = new URL(request.url);
+  const filename = url.searchParams.get('filename');
+  if (!filename) {
+    return NextResponse.json({ error: 'Missing filename to delete.' }, { status: 400 });
+  }
+
+  const labelsDir = path.join(process.cwd(), 'Labels');
+  const filePath = path.join(labelsDir, filename);
+
+  try {
+    await fs.unlink(filePath);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: 'Could not delete label.' }, { status: 500 });
+  }
+}
