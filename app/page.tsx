@@ -108,8 +108,6 @@ function sanitizeNumericInput(value: string) {
   return normalized === '' ? 0 : Number(normalized);
 }
 
-const STORAGE_KEY = 'nutrition-labels';
-
 function makeSlug(name: string) {
   return name
     .trim()
@@ -118,20 +116,18 @@ function makeSlug(name: string) {
     .replace(/[^a-z0-9-]/g, '');
 }
 
-function loadLabelsFromStorage(): SavedLabel[] {
-  try {
-    if (typeof window === 'undefined') return [];
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as SavedLabel[];
-  } catch {
-    return [];
-  }
-}
-
-function persistLabels(labels: SavedLabel[]) {
+function downloadJsonPayload(payload: ExportPayload) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
+  const filename = `${makeSlug(payload.productName) || 'product'}.json`;
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
 
 function emptyRow(index: number): IngredientRow {
@@ -212,7 +208,6 @@ function NutritionTable({ nutritionPer100g, nutrientKeys, fatDetailsVisible }: {
 }
 
 export default function HomePage() {
-  const [currentView, setCurrentView] = useState<'new' | 'saved'>('new');
   const [productName, setProductName] = useState('');
   const [rows, setRows] = useState<IngredientRow[]>([emptyRow(1)]);
   const [finalWeight, setFinalWeight] = useState(0);
@@ -222,10 +217,6 @@ export default function HomePage() {
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [calculationError, setCalculationError] = useState<string | null>(null);
 
-  const [savedLabels, setSavedLabels] = useState<SavedLabel[]>([]);
-  const [selectedLabel, setSelectedLabel] = useState<SavedLabel | null>(null);
-  const [loadingLabels, setLoadingLabels] = useState(false);
-
   const ingredientMap = new Map(ingredientOptions.map((item) => [item.ingr_name, item]));
   const nutrientKeys = inferredNutrientKeys;
 
@@ -234,38 +225,6 @@ export default function HomePage() {
   }, [rows]);
 
   const fatDetailsVisible = useMemo(() => shouldShowFatDetails(nutritionPer100g), [nutritionPer100g]);
-  const selectedLabelFatDetailsVisible = useMemo(
-    () => shouldShowFatDetails(selectedLabel?.data?.nutritionPer100g),
-    [selectedLabel]
-  );
-
-  // Load saved labels when switching to saved view
-  useEffect(() => {
-    if (currentView === 'saved') {
-      loadSavedLabels();
-    }
-  }, [currentView]);
-
-  const loadSavedLabels = async () => {
-    setLoadingLabels(true);
-    try {
-      const data = loadLabelsFromStorage();
-      setSavedLabels(data);
-      if (data.length > 0) {
-        setSelectedLabel((current) => {
-          if (current && data.some((item) => item.filename === current.filename)) {
-            return current;
-          }
-          return data[0];
-        });
-      } else {
-        setSelectedLabel(null);
-      }
-    } catch (error) {
-      console.error('Failed to load labels:', error);
-    }
-    setLoadingLabels(false);
-  };
 
   const updateRow = (index: number, row: Partial<IngredientRow>) => {
     setRows((current) =>
@@ -372,10 +331,10 @@ export default function HomePage() {
     };
     setReadyExportPayload(payload);
     setCanSave(true);
-    setExportMessage('Calculation done. Click "Save" to save this label.');
+    setExportMessage('Calculation done. Click "Download JSON" to save this label.');
   };
 
-  const saveLabel = async () => {
+  const saveJson = () => {
     setExportMessage(null);
     if (!readyExportPayload || !canSave) {
       setExportMessage('Nothing to save. Run calculation first.');
@@ -383,50 +342,10 @@ export default function HomePage() {
     }
 
     try {
-      const existing = loadLabelsFromStorage();
-      const slug = makeSlug(readyExportPayload.productName) || 'product';
-      const filename = `${slug}.json`;
-
-      if (existing.some((label) => label.filename === filename)) {
-        setExportMessage('A label with that name already exists. Choose a different product name.');
-        return;
-      }
-
-      const newLabel: SavedLabel = {
-        filename,
-        productName: readyExportPayload.productName,
-        data: readyExportPayload
-      };
-
-      persistLabels([...existing, newLabel]);
-      setExportMessage(`✓ Saved as "${readyExportPayload.productName}"`);
-      setCanSave(false);
-      loadSavedLabels();
-      setTimeout(() => {
-        setProductName('');
-        setRows([emptyRow(1)]);
-        setFinalWeight(0);
-        setNutritionPer100g(null);
-        setReadyExportPayload(null);
-        setExportMessage(null);
-      }, 2000);
+      downloadJsonPayload(readyExportPayload);
+      setExportMessage(`✓ Downloaded "${readyExportPayload.productName}.json"`);
     } catch (err) {
-      setExportMessage('Failed to save label.');
-    }
-  };
-
-  const deleteLabel = async (filename: string) => {
-    setExportMessage(null);
-    try {
-      const existing = loadLabelsFromStorage();
-      const updated = existing.filter((label) => label.filename !== filename);
-      persistLabels(updated);
-
-      setExportMessage('Label deleted.');
-      setSelectedLabel((current) => (current?.filename === filename ? null : current));
-      loadSavedLabels();
-    } catch (error) {
-      setExportMessage('Failed to delete label.');
+      setExportMessage('Failed to download JSON.');
     }
   };
 
@@ -440,19 +359,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Tab navigation */}
-        <div className="tabs">
-          <button className={`tab ${currentView === 'new' ? 'active' : ''}`} onClick={() => setCurrentView('new')}>
-            New Label
-          </button>
-          <button className={`tab ${currentView === 'saved' ? 'active' : ''}`} onClick={() => setCurrentView('saved')}>
-            Saved Labels
-          </button>
-        </div>
-
-        {/* New Label View */}
-        {currentView === 'new' && (
-          <div className="view-content">
+        <div className="view-content">
             <label className="field-group">
               <span>Product Name</span>
               <input
@@ -561,81 +468,13 @@ export default function HomePage() {
               <button
                 type="button"
                 className="primary-button"
-                onClick={saveLabel}
+                onClick={saveJson}
                 disabled={!canSave || productName.trim() === ''}
               >
-                Save
+                Download JSON
               </button>
             </div>
           </div>
-        )}
-
-        {/* Saved Labels View */}
-        {currentView === 'saved' && (
-          <div className="saved-labels-view">
-            <div className="saved-labels-sidebar">
-              <h3>Saved Labels</h3>
-              <p className="field-help" style={{ marginTop: 0 }}>Saved locally in your browser for internal use.</p>
-              {loadingLabels ? (
-                <p style={{ color: '#999' }}>Loading...</p>
-              ) : savedLabels.length === 0 ? (
-                <p style={{ color: '#999' }}>No saved labels yet</p>
-              ) : (
-                <div className="labels-list">
-                  {savedLabels.map((label) => (
-                    <button
-                      key={label.filename}
-                      className={`label-item ${selectedLabel?.filename === label.filename ? 'active' : ''}`}
-                      onClick={() => setSelectedLabel(label)}
-                    >
-                      {label.productName}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="saved-labels-content">
-              {selectedLabel ? (
-                <>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-                    <h2 style={{ margin: 0 }}>{selectedLabel.productName}</h2>
-                    <div>
-                      <button type="button" className="remove-button" onClick={() => deleteLabel(selectedLabel.filename)}>
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                  <div className="saved-results stacked">
-                    <div className="result-panel">
-                      <h3>Ingredients</h3>
-                      <ol>
-                        {selectedLabel.data.ingredients
-                          .sort((a, b) => b.quantity - a.quantity)
-                          .map((ing, idx) => (
-                            <li key={idx}>
-                              {ing.name} — {ing.quantity} {ing.unit}
-                            </li>
-                          ))}
-                      </ol>
-                    </div>
-
-                    <div className="result-panel">
-                      <h3>Nutrition per 100 g</h3>
-                      <NutritionTable
-                        nutritionPer100g={selectedLabel.data.nutritionPer100g}
-                        nutrientKeys={nutrientKeys}
-                        fatDetailsVisible={selectedLabelFatDetailsVisible}
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p style={{ color: '#999' }}>Select a label to view</p>
-              )}
-            </div>
-          </div>
-        )}
       </section>
     </main>
   );
