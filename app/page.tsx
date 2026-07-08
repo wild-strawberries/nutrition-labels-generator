@@ -437,6 +437,7 @@ export default function HomePage() {
                 onChange={(event) => setProductName(event.target.value)}
                 placeholder="e.g. Strawberry Jam"
               />
+              <span className="field-help">Choose a unique product name — it will be used as the identifier and filename when saving.</span>
             </label>
 
             <div className="ingredients-block">

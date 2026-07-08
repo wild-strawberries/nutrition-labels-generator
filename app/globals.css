@@ -61,6 +61,13 @@ p {
   color: #6b7482;
 }
 
+.field-help {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #6b7482;
+}
+
 input,
 select {
   width: 100%;
