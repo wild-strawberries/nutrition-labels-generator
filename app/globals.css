@@ -86,7 +86,7 @@ select:focus {
 
 .ingredients-header {
   display: grid;
-  grid-template-columns: 1.5fr 0.9fr 0.7fr 0.9fr;
+  grid-template-columns: 1.6fr 0.9fr 0.9fr;
   gap: 16px;
   font-weight: 600;
   color: #4f5665;
@@ -94,7 +94,7 @@ select:focus {
 
 .ingredient-row {
   display: grid;
-  grid-template-columns: 1.5fr 0.9fr 0.7fr 0.9fr;
+  grid-template-columns: 1.6fr 0.9fr 0.9fr;
   gap: 16px;
   align-items: flex-end;
 }
@@ -102,6 +102,20 @@ select:focus {
 .ingredient-input {
   display: grid;
   gap: 6px;
+}
+
+.quantity-with-unit {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.unit-suffix {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e6e9ef;
+  background: #fff;
+  color: #4b5563;
 }
 
 .field-error {
@@ -413,11 +427,9 @@ td:last-child {
   }
 
   .mobile-label {
-    display: none;
     font-size: 0.85rem;
     color: #6b7482;
     margin-bottom: 6px;
-    display: block;
   }
 
   .ingredient-row > div {
@@ -431,5 +443,16 @@ td:last-child {
   .ingredient-row {
     gap: 12px;
     align-items: stretch;
+  }
+}
+
+/* hide mobile labels by default, show them only on small screens */
+.mobile-label {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .mobile-label {
+    display: block;
   }
 }

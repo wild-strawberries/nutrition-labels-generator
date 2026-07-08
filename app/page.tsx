@@ -442,8 +442,7 @@ export default function HomePage() {
             <div className="ingredients-block">
               <div className="ingredients-header">
                 <span>Ingredient</span>
-                <span>Quantity</span>
-                <span>Unit</span>
+                <span>Quantity (g)</span>
                 <span aria-hidden="true"></span>
               </div>
 
@@ -469,17 +468,15 @@ export default function HomePage() {
 
                   <div>
                     <span className="mobile-label">Quantity</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={row.quantity}
-                      onChange={(event) => updateRow(index, { quantity: sanitizeNumericInput(event.target.value) })}
-                    />
-                  </div>
-
-                  <div>
-                    <span className="mobile-label">Unit</span>
-                    <div style={{ padding: 12, borderRadius: 8, background: '#fff', border: '1px solid #e6e9ef', textAlign: 'center' }}>g</div>
+                    <div className="quantity-with-unit">
+                      <input
+                        type="number"
+                        min="1"
+                        value={row.quantity}
+                        onChange={(event) => updateRow(index, { quantity: sanitizeNumericInput(event.target.value) })}
+                      />
+                      <span className="unit-suffix">g</span>
+                    </div>
                   </div>
 
                   <div>
